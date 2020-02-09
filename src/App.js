@@ -1,5 +1,6 @@
 import React from "react";
 import "./App.scss";
+import beep from "./beep.wav";
 
 const classNames = require("classnames");
 
@@ -19,6 +20,11 @@ const defaultState = {
   hasChanged: false
 };
 
+const title = document.title;
+const audio = new Audio(beep);
+
+let intervalID;
+
 const TimerControl = props => {
   return (
     <button
@@ -32,23 +38,27 @@ const TimerControl = props => {
 };
 
 const TimerLengthControl = props => {
+  const substractClasses = classNames({
+    "timer-length__control": true,
+    substract: true,
+    "not-allowed": props.timerLength <= 1
+  });
+
+  const addClasses = classNames({
+    "timer-length__control": true,
+    add: true,
+    "not-allowed": props.timerLength >= 60
+  });
+
   return (
     <div className="timer-length">
       <div>{props.title}:</div>
       <div className="timer-length__controls">
-        <button
-          value="-"
-          className="timer-length__control substract"
-          onClick={props.onClick}
-        >
+        <button value="-" className={substractClasses} onClick={props.onClick}>
           -
         </button>
         <p className="timer-length__value">{props.timerLength}</p>
-        <button
-          value="+"
-          className="timer-length__control add"
-          onClick={props.onClick}
-        >
+        <button value="+" className={addClasses} onClick={props.onClick}>
           +
         </button>
       </div>
@@ -59,12 +69,12 @@ const TimerLengthControl = props => {
 const Display = props => {
   const resetClasses = classNames({
     reset: true,
-    hide: !props.hasChanged
+    hide: !props.hasChanged && !props.hasStarted
   });
 
   const pauseClasses = classNames({
     pause: true,
-    hide: !props.hasStarted && !props.isRunning
+    hide: !props.isRunning
   });
 
   const startClasses = classNames({
@@ -75,7 +85,11 @@ const Display = props => {
   return (
     <main id="display">
       <h1 id="status">
-        {props.timerType === SESSION.type ? "Work time!" : "Take a break!"}
+        {props.hasStarted
+          ? props.timerType === SESSION.type
+            ? "Work time!"
+            : "Take a break!"
+          : title}
       </h1>
       <div id="counter">{props.displayedTimer}</div>
       <div id="timer-controls">
@@ -116,22 +130,61 @@ class App extends React.Component {
   }
 
   resetCountdown = () => {
-    this.setState(defaultState);
+    clearInterval(intervalID);
+    this.setState(defaultState, () => {
+      this.setTitle();
+    });
   };
 
   pauseCountdown = () => {
-    /* TODO */
+    clearInterval(intervalID);
+    this.setState({ isRunning: false }, () => {
+      this.setTitle();
+    });
   };
 
   beginCountdown = () => {
-    /* TODO */
+    if (!this.state.isRunning) {
+      this.setState({
+        isRunning: true,
+        hasStarted: true
+      });
+
+      intervalID = setInterval(() => {
+        if (this.state.timer !== 0) {
+          this.setState({
+            timer: this.state.timer - 1
+          });
+        } else {
+          clearInterval(intervalID);
+          this.setState({ isRunning: false });
+          audio.play();
+
+          if (this.state.timerType === SESSION.type) {
+            this.setState({
+              timerType: BREAK.type,
+              timer: this.state[BREAK.property] * 60
+            });
+          } else if (this.state.timerType === BREAK.type) {
+            this.setState({
+              timerType: SESSION.type,
+              timer: this.state[SESSION.property] * 60
+            });
+          }
+
+          this.beginCountdown();
+        }
+
+        this.setTitle();
+      }, 1000);
+    }
   };
 
   setSessionLength = e => {
     this.controlLength(
       SESSION.property,
       e.target.value,
-      this.state.sessionLength,
+      this.state[SESSION.property],
       SESSION.type
     );
   };
@@ -140,7 +193,7 @@ class App extends React.Component {
     this.controlLength(
       BREAK.property,
       e.target.value,
-      this.state.breakLength,
+      this.state[BREAK.property],
       BREAK.type
     );
   };
@@ -173,12 +226,22 @@ class App extends React.Component {
     this.setState({ hasChanged: true });
   };
 
+  setTitle = () => {
+    if (this.state.hasStarted) {
+      document.title = `${
+        this.state.isRunning ? this.state.timerType : "PAUSED"
+      } (${this.clockify(this.state.timer)}) - ${title}`;
+    } else {
+      document.title = title;
+    }
+  };
+
   clockify = () => {
     let minutes = Math.floor(this.state.timer / 60);
-    let seconds = minutes * 60 - this.state.timer;
+    let seconds = this.state.timer - minutes * 60;
     minutes = minutes < 10 ? "0" + minutes : minutes;
     seconds = seconds < 10 ? "0" + seconds : seconds;
-    return minutes + ":" + seconds;
+    return `${minutes}:${seconds}`;
   };
 
   render() {
@@ -186,11 +249,7 @@ class App extends React.Component {
       <div id="page-wrapper">
         <Display
           timerType={this.state.timerType}
-          displayedTimer={this.clockify(
-            this.state.timerType === SESSION.type
-              ? this.state.sessionLength
-              : this.state.breakLength
-          )}
+          displayedTimer={this.clockify(this.state.timer)}
           resetCountdown={this.resetCountdown}
           pauseCountdown={this.pauseCountdown}
           beginCountdown={this.beginCountdown}

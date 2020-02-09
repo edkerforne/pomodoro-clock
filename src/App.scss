@@ -6,7 +6,7 @@
 
 // Colors
 $primary__color: #0e83d6;
-$pause__color: #668;
+$pause__color: rgb(120, 120, 131);
 $reset__color: #e71d36;
 $background__color: #011627;
 $text__color: #fdfffc;
@@ -19,6 +19,7 @@ $desktop__width: "1080px";
 
 // Other units
 $border-radius: 4px;
+$control__size: 44px;
 
 /**
  ** Mixins & utility classes
@@ -155,8 +156,8 @@ $border-radius: 4px;
   color: $text__color;
   font-size: 150%;
   font-weight: 700;
-  width: 44px;
-  height: 44px;
+  width: $control__size;
+  height: $control__size;
   border: 0;
   cursor: pointer;
 
@@ -168,7 +169,12 @@ $border-radius: 4px;
     border-radius: 0 $border-radius $border-radius 0;
   }
 
-  &:hover {
+  &.not-allowed {
+    cursor: not-allowed;
+    background-color: $pause__color;
+  }
+
+  &:hover:not(.not-allowed) {
     opacity: 0.5;
   }
 }
@@ -178,8 +184,8 @@ $border-radius: 4px;
   background-color: $text__color;
   color: $background__color;
   font-size: 115%;
-  width: 3rem;
-  height: 40px;
+  width: $control__size;
+  height: $control__size;
   margin: 0;
 }
 
