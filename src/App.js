@@ -1,6 +1,8 @@
 import React from "react";
 import "./App.scss";
 
+const classNames = require("classnames");
+
 // Timer type can be either session or break,
 // these values are compared throughout the application
 // to display and control their respective data
@@ -12,64 +14,118 @@ const defaultState = {
   [BREAK.property]: 5,
   timer: 1500,
   timerType: SESSION.type,
-  paused: true
+  isRunning: false,
+  hasStarted: false,
+  hasChanged: false
 };
 
-class TimerLengthControl extends React.Component {
-  render() {
-    return (
-      <div className="timer-length">
-        <div>{this.props.title}:</div>
-        <div className="timer-length__controls">
-          <button
-            value="-"
-            className="timer-length__control substract"
-            onClick={this.props.onClick}
-          >
-            -
-          </button>
-          <p className="timer-length__value">{this.props.timerLength}</p>
-          <button
-            value="+"
-            className="timer-length__control add"
-            onClick={this.props.onClick}
-          >
-            +
-          </button>
-        </div>
-      </div>
-    );
-  }
-}
+const TimerControl = props => {
+  return (
+    <button
+      value={props.value}
+      className={"timer__control " + props.className}
+      onClick={props.onClick}
+    >
+      {props.title}
+    </button>
+  );
+};
 
-class Display extends React.Component {
-  render() {
-    return (
-      <main id="display">
-        <h1 id="status">
-          {this.props.timerType === SESSION.type
-            ? "Work time!"
-            : "Take a break!"}
-        </h1>
-        <div id="counter">{this.props.displayedTimer}</div>
-        <div id="timer-controls">
-          <button className="timer__control reset">RESET</button>
-          <button className="timer__control start">RESUME</button>
-        </div>
-      </main>
-    );
-  }
-}
+const TimerLengthControl = props => {
+  return (
+    <div className="timer-length">
+      <div>{props.title}:</div>
+      <div className="timer-length__controls">
+        <button
+          value="-"
+          className="timer-length__control substract"
+          onClick={props.onClick}
+        >
+          -
+        </button>
+        <p className="timer-length__value">{props.timerLength}</p>
+        <button
+          value="+"
+          className="timer-length__control add"
+          onClick={props.onClick}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+};
+
+const Display = props => {
+  const resetClasses = classNames({
+    reset: true,
+    hide: !props.hasChanged
+  });
+
+  const pauseClasses = classNames({
+    pause: true,
+    hide: !props.hasStarted && !props.isRunning
+  });
+
+  const startClasses = classNames({
+    start: true,
+    hide: props.hasStarted && props.isRunning
+  });
+
+  return (
+    <main id="display">
+      <h1 id="status">
+        {props.timerType === SESSION.type ? "Work time!" : "Take a break!"}
+      </h1>
+      <div id="counter">{props.displayedTimer}</div>
+      <div id="timer-controls">
+        <TimerControl
+          title="RESET"
+          value="reset"
+          className={resetClasses}
+          onClick={props.resetCountdown}
+        />
+        <TimerControl
+          title="PAUSE"
+          value="pause"
+          className={pauseClasses}
+          onClick={props.pauseCountdown}
+        />
+        <TimerControl
+          title={props.hasStarted ? "RESUME" : "START"}
+          value="start"
+          className={startClasses}
+          onClick={props.beginCountdown}
+        />
+      </div>
+    </main>
+  );
+};
 
 class App extends React.Component {
   constructor(props) {
     super(props);
     this.state = defaultState;
+    this.resetCountdown = this.resetCountdown.bind(this);
+    this.pauseCountdown = this.pauseCountdown.bind(this);
+    this.beginCountdown = this.beginCountdown.bind(this);
     this.setSessionLength = this.setSessionLength.bind(this);
     this.setBreakLength = this.setBreakLength.bind(this);
     this.controlLength = this.controlLength.bind(this);
     this.clockify = this.clockify.bind(this);
   }
+
+  resetCountdown = () => {
+    this.setState(defaultState);
+  };
+
+  pauseCountdown = () => {
+    /* TODO */
+  };
+
+  beginCountdown = () => {
+    /* TODO */
+  };
 
   setSessionLength = e => {
     this.controlLength(
@@ -90,7 +146,7 @@ class App extends React.Component {
   };
 
   controlLength = (propertyToChange, buttonValue, currentLength, timerType) => {
-    if (!this.state.paused) return;
+    if (this.state.isRunning) return;
     if (timerType === this.state.timerType) {
       if (buttonValue === "-" && currentLength !== 1) {
         this.setState({
@@ -114,6 +170,7 @@ class App extends React.Component {
         });
       }
     }
+    this.setState({ hasChanged: true });
   };
 
   clockify = () => {
@@ -134,6 +191,12 @@ class App extends React.Component {
               ? this.state.sessionLength
               : this.state.breakLength
           )}
+          resetCountdown={this.resetCountdown}
+          pauseCountdown={this.pauseCountdown}
+          beginCountdown={this.beginCountdown}
+          hasChanged={this.state.hasChanged}
+          isRunning={this.state.isRunning}
+          hasStarted={this.state.hasStarted}
         />
         <div id="timer-length-settings">
           <TimerLengthControl
